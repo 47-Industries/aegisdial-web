@@ -41,11 +41,8 @@ function waitlistEmail(email) {
         <!-- Header -->
         <tr><td style="padding:40px 40px 32px;text-align:center;border-bottom:1px solid #1F2832;">
           <table cellpadding="0" cellspacing="0" style="margin:0 auto 18px;">
-            <tr><td style="width:52px;height:52px;background:rgba(31,224,138,0.12);border-radius:16px;text-align:center;vertical-align:middle;">
-              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M14 2L4 7v8c0 5.25 4.27 10.17 10 11.37C19.73 25.17 24 20.25 24 15V7L14 2z" fill="rgba(31,224,138,0.2)" stroke="#1FE08A" stroke-width="1.5"/>
-                <path d="M10 14l3 3 5-5" stroke="#1FE08A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+            <tr><td style="width:64px;height:64px;border-radius:18px;overflow:hidden;text-align:center;vertical-align:middle;">
+              <img src="https://aegisdial-web-production.up.railway.app/icon.png" width="64" height="64" alt="AegisDial" style="display:block;border-radius:18px;" />
             </td></tr>
           </table>
           <p style="margin:0;font-size:13px;font-weight:600;letter-spacing:2px;color:#6A7480;text-transform:uppercase;">AegisDial</p>
