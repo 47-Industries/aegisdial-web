@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AegisDial — Your Personal Scam Shield</title>
+  <meta name="description" content="On-device AI that stops scam calls, suspicious texts, and data breaches before they hit. Join the waitlist." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #000000;
+      --surface:    #0A0E14;
+      --surface2:   #12181F;
+      --border:     #1F2832;
+      --teal:       #1FE08A;
+      --teal-dim:   rgba(31,224,138,.12);
+      --teal-glow:  rgba(31,224,138,.35);
+      --text:       #FFFFFF;
+      --text2:      #B8C2CC;
+      --text3:      #6A7480;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── Stars canvas ── */
+    #stars {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 40px;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .nav-logo svg { width: 28px; height: 28px; }
+
+    .nav-logo span {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: .4px;
+      color: var(--text);
+    }
+
+    .nav-cta {
+      background: var(--teal);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      padding: 9px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity .15s;
+    }
+    .nav-cta:hover { opacity: .85; }
+
+    /* ── Sections ── */
+    section { position: relative; z-index: 1; }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--teal-dim);
+      border: 1px solid rgba(31,224,138,.3);
+      border-radius: 99px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--teal);
+      letter-spacing: .6px;
+      margin-bottom: 32px;
+    }
+
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--teal);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--teal);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .4; }
+    }
+
+    .hero h1 {
+      font-size: clamp(38px, 7vw, 72px);
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1.05;
+      max-width: 780px;
+      background: linear-gradient(135deg, #fff 40%, #b8ffd9 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 20px;
+    }
+
+    .hero p {
+      font-size: clamp(16px, 2.2vw, 20px);
+      color: var(--text2);
+      max-width: 540px;
+      line-height: 1.65;
+      margin-bottom: 44px;
+    }
+
+    /* ── Waitlist form ── */
+    .waitlist-form {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      max-width: 420px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .waitlist-form input {
+      flex: 1;
+      min-width: 220px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 15px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s;
+    }
+    .waitlist-form input::placeholder { color: var(--text3); }
+    .waitlist-form input:focus { border-color: var(--teal); }
+
+    .waitlist-form button {
+      background: var(--teal);
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 26px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      white-space: nowrap;
+    }
+    .waitlist-form button:hover { opacity: .88; }
+    .waitlist-form button:active { transform: scale(.97); }
+    .waitlist-form button:disabled { opacity: .5; cursor: not-allowed; }
+
+    .form-note {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--text3);
+    }
+
+    .success-msg {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: rgba(31,224,138,.1);
+      border: 1px solid rgba(31,224,138,.3);
+      border-radius: 12px;
+      padding: 14px 22px;
+      color: var(--teal);
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    /* ── Features ── */
+    .features {
+      padding: 100px 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--text3);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: clamp(26px, 4vw, 38px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 56px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 30px 26px;
+      transition: border-color .2s, transform .2s;
+    }
+    .feature-card:hover {
+      border-color: rgba(31,224,138,.35);
+      transform: translateY(-3px);
+    }
+
+    .feature-icon {
+      width: 46px; height: 46px;
+      border-radius: 13px;
+      background: var(--teal-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+    }
+
+    .feature-icon svg { width: 22px; height: 22px; }
+
+    .feature-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.6;
+    }
+
+    /* ── Stats ── */
+    .stats {
+      padding: 80px 24px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stats-inner {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      flex: 1;
+      min-width: 160px;
+      text-align: center;
+      padding: 20px 30px;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+
+    .stat-value {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--teal);
+      letter-spacing: -1px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--text3);
+    }
+
+    /* ── Privacy ── */
+    .privacy-strip {
+      padding: 60px 24px;
+      text-align: center;
+    }
+
+    .privacy-strip .lock-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text3);
+      font-size: 14px;
+    }
+
+    .privacy-strip .lock-row svg { width: 14px; height: 14px; }
+
+    /* ── CTA bottom ── */
+    .cta-bottom {
+      padding: 100px 24px;
+      text-align: center;
+      background: radial-gradient(ellipse at center, rgba(31,224,138,.07) 0%, transparent 70%);
+    }
+
+    .cta-bottom h2 {
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      margin-bottom: 16px;
+    }
+
+    .cta-bottom p {
+      font-size: 16px;
+      color: var(--text2);
+      margin-bottom: 40px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: gap;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    footer .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text2);
+    }
+
+    footer .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    footer .footer-links a {
+      font-size: 13px;
+      color: var(--text3);
+      text-decoration: none;
+      transition: color .15s;
+    }
+    footer .footer-links a:hover { color: var(--text2); }
+
+    footer .footer-copy {
+      font-size: 13px;
+      color: var(--text3);
+    }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      footer { flex-direction: column; align-items: flex-start; padding: 24px 20px; }
+      .stat { border-right: none; border-bottom: 1px solid var(--border); }
+      .stat:last-child { border-bottom: none; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<!-- Nav -->
+<nav>
+  <a class="nav-logo" href="#">
+    <svg viewBox="0 0 28 28" fill="none">
+      <path d="M14 2L4 7v8c0 5.25 4.27 10.17 10 11.37C19.73 25.17 24 20.25 24 15V7L14 2z" fill="rgba(31,224,138,.18)" stroke="#1FE08A" stroke-width="1.4"/>
+      <path d="M10 14l3 3 5-5" stroke="#1FE08A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>AegisDial</span>
+  </a>
+  <a class="nav-cta" href="#waitlist">Join Waitlist</a>
+</nav>
+
+<!-- Hero -->
+<section class="hero" id="top">
+  <div class="hero-badge">Now in Beta · iOS</div>
+  <h1>Your personal scam shield.</h1>
+  <p>On-device AI that detects scam calls in real time, flags suspicious texts, and monitors the dark web for your data — all privately, on your phone.</p>
+
+  <div class="waitlist-form" id="waitlist">
+    <input type="email" id="email-input" placeholder="Enter your email" autocomplete="email" />
+    <button id="join-btn" onclick="joinWaitlist()">Get Early Access</button>
+  </div>
+  <div class="success-msg" id="success-msg">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="7" stroke="#1FE08A" stroke-width="1.4"/>
+      <path d="M5 8l2 2 4-4" stroke="#1FE08A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    You're on the list. We'll be in touch.
+  </div>
+  <p class="form-note">No spam. No credit card. Just early access.</p>
+</section>
+
+<!-- Features -->
+<section class="features">
+  <p class="section-label">What AegisDial does</p>
+  <h2 class="section-title">Three shields. One app.</h2>
+  <div class="features-grid">
+
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 22 22" fill="none">
+          <path d="M11 2L3 6v6c0 4.42 3.4 8.56 8 9.56 4.6-1 8-5.14 8-9.56V6L11 2z" fill="rgba(31,224,138,.2)" stroke="#1FE08A" stroke-width="1.4"/>
+          <circle cx="11" cy="11" r="2.5" stroke="#1FE08A" stroke-width="1.3"/>
+        </svg>
+      </div>
+      <h3>Live Shield</h3>
+      <p>While you're on a call, AegisDial listens on-device and scores the conversation in real time. Get instant risk warnings — before you give anything away.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 22 22" fill="none">
+          <rect x="3" y="5" width="16" height="12" rx="2.5" stroke="#1FE08A" stroke-width="1.4"/>
+          <path d="M7 9h8M7 13h5" stroke="#1FE08A" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3>SMS Filter</h3>
+      <p>Paste any suspicious text. In seconds, you get a plain-English verdict — scam, safe, or suspicious — plus exactly why the AI flagged it.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg viewBox="0 0 22 22" fill="none">
+          <ellipse cx="11" cy="11" rx="8" ry="8" stroke="#1FE08A" stroke-width="1.4"/>
+          <path d="M11 7v4l2.5 2.5" stroke="#1FE08A" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3>Breach Monitor</h3>
+      <p>Know if your email or phone number has appeared in dark-web data leaks. See exactly what was exposed and what to do about it.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- Stats -->
+<section class="stats">
+  <div class="stats-inner">
+    <div class="stat">
+      <div class="stat-value">2.4M</div>
+      <div class="stat-label">Calls screened</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">847K</div>
+      <div class="stat-label">Scams blocked</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">12.8K</div>
+      <div class="stat-label">Breaches caught</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">$0</div>
+      <div class="stat-label">Data sold — ever</div>
+    </div>
+  </div>
+</section>
+
+<!-- Privacy -->
+<section class="privacy-strip">
+  <div class="lock-row">
+    <svg viewBox="0 0 14 14" fill="none">
+      <rect x="2.5" y="6" width="9" height="7" rx="1.5" stroke="#6A7480" stroke-width="1.2"/>
+      <path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" stroke="#6A7480" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+    All analysis stays on your device. We never see your calls, texts, or personal data.
+  </div>
+</section>
+
+<!-- CTA bottom -->
+<section class="cta-bottom">
+  <h2>Stop scams before they start.</h2>
+  <p>Join thousands of people protecting themselves with AegisDial.</p>
+  <div class="waitlist-form" style="justify-content:center; margin: 0 auto;">
+    <input type="email" id="email-input-2" placeholder="Enter your email" autocomplete="email" />
+    <button id="join-btn-2" onclick="joinWaitlist2()">Get Early Access</button>
+  </div>
+  <div class="success-msg" id="success-msg-2" style="justify-content:center; margin-top:12px;">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="7" stroke="#1FE08A" stroke-width="1.4"/>
+      <path d="M5 8l2 2 4-4" stroke="#1FE08A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    You're on the list. We'll be in touch.
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-logo">
+    <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
+      <path d="M14 2L4 7v8c0 5.25 4.27 10.17 10 11.37C19.73 25.17 24 20.25 24 15V7L14 2z" fill="rgba(31,224,138,.18)" stroke="#1FE08A" stroke-width="1.4"/>
+      <path d="M10 14l3 3 5-5" stroke="#1FE08A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    AegisDial
+  </div>
+  <div class="footer-links">
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/terms">Terms</a>
+    <a href="mailto:hello@aegisdial.com">Contact</a>
+  </div>
+  <div class="footer-copy">© 2026 AegisDial. All rights reserved.</div>
+</footer>
+
+<script>
+  // ── Stars ──────────────────────────────────────────────────
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    initStars();
+  }
+
+  function initStars() {
+    stars = Array.from({ length: 140 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.2 + 0.2,
+      o: Math.random() * 0.6 + 0.1,
+      speed: Math.random() * 0.15 + 0.03,
+    }));
+  }
+
+  function drawStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${s.o})`;
+      ctx.fill();
+      s.y += s.speed;
+      if (s.y > canvas.height) {
+        s.y = 0;
+        s.x = Math.random() * canvas.width;
+      }
+    });
+    requestAnimationFrame(drawStars);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  drawStars();
+
+  // ── Waitlist ───────────────────────────────────────────────
+  async function submitEmail(emailId, btnId, successId) {
+    const input = document.getElementById(emailId);
+    const btn = document.getElementById(btnId);
+    const success = document.getElementById(successId);
+    const email = input.value.trim();
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      input.style.borderColor = '#FF4D6D';
+      setTimeout(() => input.style.borderColor = '', 1200);
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Joining…';
+
+    try {
+      const res = await fetch('/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        input.style.display = 'none';
+        btn.style.display = 'none';
+        success.style.display = 'flex';
+      } else {
+        throw new Error();
+      }
+    } catch {
+      btn.disabled = false;
+      btn.textContent = 'Get Early Access';
+      input.style.borderColor = '#FF4D6D';
+      setTimeout(() => input.style.borderColor = '', 1200);
+    }
+  }
+
+  function joinWaitlist()  { submitEmail('email-input',   'join-btn',   'success-msg');   }
+  function joinWaitlist2() { submitEmail('email-input-2', 'join-btn-2', 'success-msg-2'); }
+</script>
+
+</body>
+</html>
