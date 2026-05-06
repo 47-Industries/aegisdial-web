@@ -637,9 +637,11 @@
         const data = await res.json().catch(() => ({}));
         btn.disabled = false;
         btn.textContent = 'Get Early Access';
-        showError(emailId, errorId, data.error === 'invalid_email'
-          ? 'That doesn\'t look like a valid email address.'
-          : 'Something went wrong. Please try again.');
+        const msg = {
+          invalid_email:   'That doesn\'t look like a valid email address.',
+          email_not_found: 'We couldn\'t find that email address. Check the spelling and try again.',
+        }[data.error] || 'Something went wrong. Please try again.';
+        showError(emailId, errorId, msg);
       }
     } catch {
       btn.disabled = false;

@@ -1,5 +1,6 @@
 import express from 'express';
 import pg from 'pg';
+import dns from 'dns/promises';
 import { Resend } from 'resend';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -14,8 +15,36 @@ const pool = new pg.Pool({
 });
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.RESEND_FROM || 'AegisDial <alerts@aegisdial.com>';
+const FROM = process.env.RESEND_FROM || 'AegisDial <onboarding@resend.dev>';
 const TF_LINK = 'https://testflight.apple.com/join/Hf2tFENW';
+
+// Block obvious throwaway / disposable domains
+const DISPOSABLE = new Set([
+  'mailinator.com', '10minutemail.com', 'guerrillamail.com', 'tempmail.com',
+  'temp-mail.org', 'throwaway.email', 'trashmail.com', 'yopmail.com',
+  'fakeinbox.com', 'getnada.com', 'maildrop.cc', 'sharklasers.com',
+  'dispostable.com', 'mintemail.com', 'mohmal.com',
+]);
+
+// Quick DNS MX check — proves the domain can actually receive email.
+// Catches fakes like "test@notarealdomain.xyz" and typos like "@gmial.com".
+async function domainCanReceiveMail(email) {
+  const domain = email.split('@')[1]?.toLowerCase();
+  if (!domain) return false;
+  if (DISPOSABLE.has(domain)) return false;
+  try {
+    const mx = await dns.resolveMx(domain);
+    return Array.isArray(mx) && mx.length > 0;
+  } catch {
+    // Some domains use only A records for mail (rare but valid).
+    try {
+      await dns.resolve(domain);
+      return false; // No MX = effectively not a mailable domain in 2026.
+    } catch {
+      return false;
+    }
+  }
+}
 
 try {
   await pool.query(`
@@ -118,8 +147,14 @@ app.use(express.static(join(__dirname, 'public')));
 
 app.post('/waitlist', async (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
     return res.status(400).json({ error: 'invalid_email' });
+  }
+
+  // Verify the domain actually exists and accepts email.
+  const reachable = await domainCanReceiveMail(email);
+  if (!reachable) {
+    return res.status(400).json({ error: 'email_not_found' });
   }
 
   try {
@@ -130,12 +165,20 @@ app.post('/waitlist', async (req, res) => {
     const isNew = result.rowCount > 0;
 
     if (isNew) {
-      resend.emails.send({
+      const sendRes = await resend.emails.send({
         from: FROM,
         to: email,
         subject: "You're on the AegisDial waitlist",
         html: waitlistEmail(email),
-      }).catch(err => console.error('Email send error:', err.message));
+      }).catch(err => {
+        console.error('Email send error:', err.message);
+        return { error: err };
+      });
+      if (sendRes?.error) {
+        console.error('Resend response error:', JSON.stringify(sendRes.error));
+      } else {
+        console.log('Email sent to', email, 'id:', sendRes?.data?.id);
+      }
     }
 
     res.json({ ok: true, new: isNew });
