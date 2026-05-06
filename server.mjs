@@ -1,5 +1,6 @@
 import express from 'express';
 import pg from 'pg';
+import { Resend } from 'resend';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -12,7 +13,10 @@ const pool = new pg.Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-// Ensure waitlist table exists
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM = process.env.RESEND_FROM || 'AegisDial <alerts@aegisdial.com>';
+const TF_LINK = 'https://testflight.apple.com/join/Hf2tFENW';
+
 try {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS waitlist (
@@ -25,24 +29,122 @@ try {
   console.error('DB init error:', err.message);
 }
 
+function waitlistEmail(email) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;background:#0A0E14;border-radius:20px;border:1px solid #1F2832;overflow:hidden;">
+
+        <!-- Header -->
+        <tr><td style="padding:40px 40px 32px;text-align:center;border-bottom:1px solid #1F2832;">
+          <table cellpadding="0" cellspacing="0" style="margin:0 auto 18px;">
+            <tr><td style="width:52px;height:52px;background:rgba(31,224,138,0.12);border-radius:16px;text-align:center;vertical-align:middle;">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14 2L4 7v8c0 5.25 4.27 10.17 10 11.37C19.73 25.17 24 20.25 24 15V7L14 2z" fill="rgba(31,224,138,0.2)" stroke="#1FE08A" stroke-width="1.5"/>
+                <path d="M10 14l3 3 5-5" stroke="#1FE08A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </td></tr>
+          </table>
+          <p style="margin:0;font-size:13px;font-weight:600;letter-spacing:2px;color:#6A7480;text-transform:uppercase;">AegisDial</p>
+        </td></tr>
+
+        <!-- Body -->
+        <tr><td style="padding:40px;">
+          <h1 style="margin:0 0 10px;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-0.8px;">You're on the list.</h1>
+          <p style="margin:0 0 28px;font-size:16px;color:#B8C2CC;line-height:1.65;">
+            Thanks for signing up. AegisDial is an on-device AI that protects you from phone scams, suspicious texts, and dark-web breaches — privately, on your iPhone.
+          </p>
+
+          <!-- TestFlight CTA -->
+          <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:32px;">
+            <tr><td align="center" style="background:#1FE08A;border-radius:14px;">
+              <a href="${TF_LINK}" style="display:block;padding:16px 24px;font-size:16px;font-weight:700;color:#000000;text-decoration:none;letter-spacing:-0.2px;">
+                Try AegisDial on TestFlight →
+              </a>
+            </td></tr>
+          </table>
+
+          <!-- Features -->
+          <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:32px;">
+            <tr>
+              <td style="padding:16px;background:#12181F;border-radius:12px;border:1px solid #1F2832;vertical-align:top;">
+                <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#1FE08A;">Live Shield</p>
+                <p style="margin:0;font-size:13px;color:#6A7480;line-height:1.5;">AI scores suspicious calls in real time while you're on the phone.</p>
+              </td>
+            </tr>
+            <tr><td style="height:10px;"></td></tr>
+            <tr>
+              <td style="padding:16px;background:#12181F;border-radius:12px;border:1px solid #1F2832;vertical-align:top;">
+                <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#1FE08A;">SMS Filter</p>
+                <p style="margin:0;font-size:13px;color:#6A7480;line-height:1.5;">Paste any suspicious text. Get a plain-English verdict in seconds.</p>
+              </td>
+            </tr>
+            <tr><td style="height:10px;"></td></tr>
+            <tr>
+              <td style="padding:16px;background:#12181F;border-radius:12px;border:1px solid #1F2832;vertical-align:top;">
+                <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#1FE08A;">Breach Monitor</p>
+                <p style="margin:0;font-size:13px;color:#6A7480;line-height:1.5;">Know if your email or phone appeared in dark-web data leaks.</p>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Privacy -->
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr><td style="padding:14px 16px;background:rgba(31,224,138,0.06);border-radius:10px;border:1px solid rgba(31,224,138,0.2);">
+              <p style="margin:0;font-size:12px;color:#6A7480;line-height:1.6;">
+                🔒 All analysis stays on your device. We never see your calls, texts, or personal data.
+              </p>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="padding:24px 40px;border-top:1px solid #1F2832;text-align:center;">
+          <p style="margin:0 0 6px;font-size:12px;color:#6A7480;">
+            © 2026 AegisDial · <a href="https://aegisdial-web-production.up.railway.app/privacy" style="color:#6A7480;text-decoration:underline;">Privacy</a> · <a href="https://aegisdial-web-production.up.railway.app/terms" style="color:#6A7480;text-decoration:underline;">Terms</a>
+          </p>
+          <p style="margin:0;font-size:11px;color:#3A4048;">You're receiving this because you signed up at aegisdial.com</p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 app.use(express.json());
 app.use(express.static(join(__dirname, 'public')));
 
 app.post('/waitlist', async (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({ error: 'Invalid email' });
+    return res.status(400).json({ error: 'invalid_email' });
   }
+
   try {
     const result = await pool.query(
       'INSERT INTO waitlist (email) VALUES ($1) ON CONFLICT (email) DO NOTHING RETURNING id',
       [email]
     );
     const isNew = result.rowCount > 0;
+
+    if (isNew) {
+      resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: "You're on the AegisDial waitlist",
+        html: waitlistEmail(email),
+      }).catch(err => console.error('Email send error:', err.message));
+    }
+
     res.json({ ok: true, new: isNew });
   } catch (err) {
     console.error('Waitlist insert error:', err.message);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'server_error' });
   }
 });
 

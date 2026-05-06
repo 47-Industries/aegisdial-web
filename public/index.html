@@ -194,6 +194,22 @@
       color: var(--text3);
     }
 
+    .form-error {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #FF4D6D;
+    }
+
+    .form-error.visible { display: flex; }
+
+    .waitlist-form input.error {
+      border-color: #FF4D6D;
+    }
+
     .success-msg {
       display: none;
       align-items: center;
@@ -420,15 +436,19 @@
   <p>On-device AI that detects scam calls in real time, flags suspicious texts, and monitors the dark web for your data — all privately, on your phone.</p>
 
   <div class="waitlist-form" id="waitlist">
-    <input type="email" id="email-input" placeholder="Enter your email" autocomplete="email" />
+    <input type="email" id="email-input" placeholder="Enter your email" autocomplete="email" oninput="clearError('email-input','error-1')" />
     <button id="join-btn" onclick="joinWaitlist()">Get Early Access</button>
+  </div>
+  <div class="form-error" id="error-1">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="6" stroke="#FF4D6D" stroke-width="1.2"/><path d="M6.5 4v3M6.5 9h.01" stroke="#FF4D6D" stroke-width="1.3" stroke-linecap="round"/></svg>
+    <span id="error-1-text">Please enter a valid email address.</span>
   </div>
   <div class="success-msg" id="success-msg">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <circle cx="8" cy="8" r="7" stroke="#1FE08A" stroke-width="1.4"/>
       <path d="M5 8l2 2 4-4" stroke="#1FE08A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    You're on the list. We'll be in touch.
+    You're on the list. Check your inbox.
   </div>
   <p class="form-note">No spam. No credit card. Just early access.</p>
 </section>
@@ -513,15 +533,19 @@
   <h2>Stop scams before they start.</h2>
   <p>Join thousands of people protecting themselves with AegisDial.</p>
   <div class="waitlist-form" style="justify-content:center; margin: 0 auto;">
-    <input type="email" id="email-input-2" placeholder="Enter your email" autocomplete="email" />
+    <input type="email" id="email-input-2" placeholder="Enter your email" autocomplete="email" oninput="clearError('email-input-2','error-2')" />
     <button id="join-btn-2" onclick="joinWaitlist2()">Get Early Access</button>
+  </div>
+  <div class="form-error" id="error-2" style="justify-content:center;">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="6" stroke="#FF4D6D" stroke-width="1.2"/><path d="M6.5 4v3M6.5 9h.01" stroke="#FF4D6D" stroke-width="1.3" stroke-linecap="round"/></svg>
+    <span id="error-2-text">Please enter a valid email address.</span>
   </div>
   <div class="success-msg" id="success-msg-2" style="justify-content:center; margin-top:12px;">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <circle cx="8" cy="8" r="7" stroke="#1FE08A" stroke-width="1.4"/>
       <path d="M5 8l2 2 4-4" stroke="#1FE08A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    You're on the list. We'll be in touch.
+    You're on the list. Check your inbox.
   </div>
 </section>
 
@@ -585,20 +609,39 @@
   drawStars();
 
   // ── Waitlist ───────────────────────────────────────────────
-  async function submitEmail(emailId, btnId, successId) {
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  function clearError(inputId, errorId) {
+    document.getElementById(inputId).classList.remove('error');
+    document.getElementById(errorId).classList.remove('visible');
+  }
+
+  function showError(inputId, errorId, msg) {
+    const input = document.getElementById(inputId);
+    const err = document.getElementById(errorId);
+    input.classList.add('error');
+    document.getElementById(errorId + '-text').textContent = msg;
+    err.classList.add('visible');
+  }
+
+  async function submitEmail(emailId, btnId, successId, errorId) {
     const input = document.getElementById(emailId);
     const btn = document.getElementById(btnId);
     const success = document.getElementById(successId);
     const email = input.value.trim();
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      input.style.borderColor = '#FF4D6D';
-      setTimeout(() => input.style.borderColor = '', 1200);
+    if (!email) {
+      showError(emailId, errorId, 'Please enter your email address.');
+      return;
+    }
+    if (!EMAIL_RE.test(email)) {
+      showError(emailId, errorId, 'That doesn\'t look like a valid email address.');
       return;
     }
 
     btn.disabled = true;
     btn.textContent = 'Joining…';
+    clearError(emailId, errorId);
 
     try {
       const res = await fetch('/waitlist', {
@@ -609,20 +652,25 @@
       if (res.ok) {
         input.style.display = 'none';
         btn.style.display = 'none';
+        document.getElementById(errorId).style.display = 'none';
         success.style.display = 'flex';
       } else {
-        throw new Error();
+        const data = await res.json().catch(() => ({}));
+        btn.disabled = false;
+        btn.textContent = 'Get Early Access';
+        showError(emailId, errorId, data.error === 'invalid_email'
+          ? 'That doesn\'t look like a valid email address.'
+          : 'Something went wrong. Please try again.');
       }
     } catch {
       btn.disabled = false;
       btn.textContent = 'Get Early Access';
-      input.style.borderColor = '#FF4D6D';
-      setTimeout(() => input.style.borderColor = '', 1200);
+      showError(emailId, errorId, 'Something went wrong. Please try again.');
     }
   }
 
-  function joinWaitlist()  { submitEmail('email-input',   'join-btn',   'success-msg');   }
-  function joinWaitlist2() { submitEmail('email-input-2', 'join-btn-2', 'success-msg-2'); }
+  function joinWaitlist()  { submitEmail('email-input',   'join-btn',   'success-msg',   'error-1'); }
+  function joinWaitlist2() { submitEmail('email-input-2', 'join-btn-2', 'success-msg-2', 'error-2'); }
 </script>
 
 </body>
