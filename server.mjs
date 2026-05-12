@@ -145,6 +145,20 @@ function waitlistEmail(email) {
 app.use(express.json());
 app.use(express.static(join(__dirname, 'public')));
 
+// Pretty URLs for legal pages — the iOS app + landing footer point at
+// /privacy and /terms, no .html. Without these routes Express's static
+// middleware falls through to a 404 because it only matches exact
+// filenames. App Store review requires working privacy + terms URLs.
+app.get('/privacy', (_req, res) => {
+  res.sendFile(join(__dirname, 'public', 'privacy.html'));
+});
+app.get('/terms', (_req, res) => {
+  res.sendFile(join(__dirname, 'public', 'terms.html'));
+});
+app.get('/support', (_req, res) => {
+  res.sendFile(join(__dirname, 'public', 'support.html'));
+});
+
 app.post('/waitlist', async (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
