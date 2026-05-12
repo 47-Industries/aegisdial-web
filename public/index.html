@@ -408,7 +408,10 @@
     <img src="/icon.png" alt="AegisDial" style="width:28px;height:28px;border-radius:7px;object-fit:cover;" />
     <span>AegisDial</span>
   </a>
-  <a class="nav-cta" href="#waitlist">Join Waitlist</a>
+  <div style="display:flex;align-items:center;gap:22px;">
+    <a href="/developers" style="font-size:14px;color:var(--text2);text-decoration:none;transition:color .15s;">For developers</a>
+    <a class="nav-cta" href="#waitlist">Join Waitlist</a>
+  </div>
 </nav>
 
 <!-- Hero -->
@@ -538,6 +541,7 @@
     AegisDial
   </div>
   <div class="footer-links">
+    <a href="/developers">Developers API</a>
     <a href="/privacy">Privacy Policy</a>
     <a href="/terms">Terms</a>
     <a href="mailto:hello@aegisdial.com">Contact</a>
@@ -603,6 +607,18 @@
     err.classList.add('visible');
   }
 
+  // Capture UTM params from the URL once on load so the backend can
+  // attribute a signup to the ad that drove it. Stored on window so
+  // both submit handlers (top + bottom forms) share the same values.
+  window.__utm = (() => {
+    const p = new URLSearchParams(window.location.search);
+    return {
+      utm_source:   p.get('utm_source')   || null,
+      utm_medium:   p.get('utm_medium')   || null,
+      utm_campaign: p.get('utm_campaign') || null,
+    };
+  })();
+
   async function submitEmail(emailId, btnId, successId, errorId) {
     const input = document.getElementById(emailId);
     const btn = document.getElementById(btnId);
@@ -626,7 +642,11 @@
       const res = await fetch('/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          source: 'landing_page',
+          ...window.__utm,
+        }),
       });
       if (res.ok) {
         input.style.display = 'none';

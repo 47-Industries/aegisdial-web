@@ -54,8 +54,37 @@ try {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  // 2026-05-12 — additive columns so paid-ad UTM tracking + the
+  // developer-portal "API access" form can tag signups without forking
+  // the table. Existing rows backfill to NULL which is fine for analytics.
+  await pool.query(
+    `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS source TEXT`,
+  );
+  await pool.query(
+    `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS utm_source TEXT`,
+  );
+  await pool.query(
+    `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS utm_medium TEXT`,
+  );
+  await pool.query(
+    `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS utm_campaign TEXT`,
+  );
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS waitlist_source_idx ON waitlist (source)`,
+  );
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS waitlist_utm_campaign_idx ON waitlist (utm_campaign)`,
+  );
 } catch (err) {
   console.error('DB init error:', err.message);
+}
+
+// Length cap on free-text tracking fields so a bad caller can't blow up
+// the table. UTM standard values are <50 chars; we leave headroom.
+function clampTag(v, max = 120) {
+  if (typeof v !== 'string') return null;
+  const trimmed = v.trim().slice(0, max);
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function waitlistEmail(email) {
@@ -158,6 +187,83 @@ app.get('/terms', (_req, res) => {
 app.get('/support', (_req, res) => {
   res.sendFile(join(__dirname, 'public', 'support.html'));
 });
+// B2B / enterprise API portal — separate page from the consumer
+// waitlist. Same /waitlist endpoint POST but with source='api_waitlist'
+// so we can tell enterprise leads apart in CSV exports.
+app.get('/developers', (_req, res) => {
+  res.sendFile(join(__dirname, 'public', 'developers.html'));
+});
+
+// Admin endpoints, basic-auth gated on WEB_ADMIN_PASSWORD. Lets us
+// pull the waitlist count + paid-ad attribution without hitting Railway
+// directly. Without the env var the routes 503 — fail-closed.
+function adminAuth(req, res, next) {
+  const expected = process.env.WEB_ADMIN_PASSWORD;
+  if (!expected) {
+    return res.status(503).json({ error: 'admin_disabled' });
+  }
+  const header = req.headers.authorization || '';
+  if (!header.startsWith('Basic ')) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="AegisDial Admin"');
+    return res.status(401).end();
+  }
+  const decoded = Buffer.from(header.slice(6), 'base64').toString('utf8');
+  const pw = decoded.split(':').slice(1).join(':');
+  if (pw !== expected) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="AegisDial Admin"');
+    return res.status(401).end();
+  }
+  next();
+}
+
+app.get('/admin/waitlist', adminAuth, async (_req, res) => {
+  try {
+    const total = await pool.query(`SELECT COUNT(*)::INT AS n FROM waitlist`);
+    const bySource = await pool.query(
+      `SELECT COALESCE(source, '(none)') AS source, COUNT(*)::INT AS n
+         FROM waitlist GROUP BY source ORDER BY n DESC`,
+    );
+    const recent = await pool.query(
+      `SELECT email, source, utm_source, utm_medium, utm_campaign, created_at
+         FROM waitlist ORDER BY created_at DESC LIMIT 100`,
+    );
+    res.json({
+      total: total.rows[0]?.n ?? 0,
+      by_source: bySource.rows,
+      recent: recent.rows,
+    });
+  } catch (err) {
+    console.error('Waitlist admin error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+app.get('/admin/waitlist/export', adminAuth, async (_req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT email, source, utm_source, utm_medium, utm_campaign, created_at
+         FROM waitlist ORDER BY created_at DESC`,
+    );
+    const csv = ['email,source,utm_source,utm_medium,utm_campaign,created_at'];
+    for (const row of r.rows) {
+      const esc = v => v == null ? '' : `"${String(v).replace(/"/g, '""')}"`;
+      csv.push([
+        esc(row.email),
+        esc(row.source),
+        esc(row.utm_source),
+        esc(row.utm_medium),
+        esc(row.utm_campaign),
+        esc(row.created_at?.toISOString()),
+      ].join(','));
+    }
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="aegisdial-waitlist.csv"');
+    res.send(csv.join('\n'));
+  } catch (err) {
+    console.error('Waitlist export error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
 
 app.post('/waitlist', async (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
@@ -171,12 +277,30 @@ app.post('/waitlist', async (req, res) => {
     return res.status(400).json({ error: 'email_not_found' });
   }
 
+  // Optional attribution. `source` is the high-level bucket ('landing_page',
+  // 'api_waitlist', 'subscribe_intent'); `utm_*` are the standard ad-platform
+  // fields. All clamped + NULL when missing. On a returning email (ON
+  // CONFLICT DO NOTHING) we still want to backfill source/UTM on the
+  // existing row so we don't lose attribution from a return visit — hence
+  // the COALESCE-style UPDATE in the conflict path.
+  const source = clampTag(req.body.source);
+  const utmSource = clampTag(req.body.utm_source);
+  const utmMedium = clampTag(req.body.utm_medium);
+  const utmCampaign = clampTag(req.body.utm_campaign);
+
   try {
     const result = await pool.query(
-      'INSERT INTO waitlist (email) VALUES ($1) ON CONFLICT (email) DO NOTHING RETURNING id',
-      [email]
+      `INSERT INTO waitlist (email, source, utm_source, utm_medium, utm_campaign)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (email) DO UPDATE SET
+         source       = COALESCE(waitlist.source,       EXCLUDED.source),
+         utm_source   = COALESCE(waitlist.utm_source,   EXCLUDED.utm_source),
+         utm_medium   = COALESCE(waitlist.utm_medium,   EXCLUDED.utm_medium),
+         utm_campaign = COALESCE(waitlist.utm_campaign, EXCLUDED.utm_campaign)
+       RETURNING (xmax = 0) AS is_new`,
+      [email, source, utmSource, utmMedium, utmCampaign],
     );
-    const isNew = result.rowCount > 0;
+    const isNew = result.rows[0]?.is_new === true;
 
     if (isNew) {
       const sendRes = await resend.emails.send({
