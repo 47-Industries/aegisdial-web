@@ -1,6 +1,7 @@
 import express from 'express';
 import pg from 'pg';
 import dns from 'dns/promises';
+import Stripe from 'stripe';
 import { Resend } from 'resend';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -17,6 +18,29 @@ const pool = new pg.Pool({
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM || 'AegisDial <onboarding@resend.dev>';
 const TF_LINK = 'https://testflight.apple.com/join/Hf2tFENW';
+
+// Stripe is optional at boot — the /subscribe page renders fine without
+// it and falls back to TestFlight + iOS IAP via the "stripe_not_configured"
+// branch in the checkout endpoint. Once Jesiah pastes STRIPE_SECRET_KEY +
+// the four STRIPE_PRICE_* vars on Railway, this lights up automatically.
+// No code change needed on cutover day.
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' })
+  : null;
+const STRIPE_PRICES = {
+  pro_annual:        process.env.STRIPE_PRICE_PRO_ANNUAL || null,
+  recovery_session:  process.env.STRIPE_PRICE_RECOVERY_SESSION || null,
+  recovery_monthly:  process.env.STRIPE_PRICE_RECOVERY_MONTHLY || null,
+  recovery_annual:   process.env.STRIPE_PRICE_RECOVERY_ANNUAL || null,
+};
+// Which plans are subscriptions vs one-time. Wrong mode is a 400 from
+// Stripe at session-create time — keep the mapping single-sourced here.
+const STRIPE_MODES = {
+  pro_annual:        'subscription',
+  recovery_session:  'payment',
+  recovery_monthly:  'subscription',
+  recovery_annual:   'subscription',
+};
 
 // Block obvious throwaway / disposable domains
 const DISPOSABLE = new Set([
@@ -192,6 +216,64 @@ app.get('/support', (_req, res) => {
 // so we can tell enterprise leads apart in CSV exports.
 app.get('/developers', (_req, res) => {
   res.sendFile(join(__dirname, 'public', 'developers.html'));
+});
+// Consumer Stripe subscribe page (Jesiah's issue #11). Renders the
+// three locked tiers and hands off to Stripe Checkout via the JSON
+// endpoint below. Pre-Stripe-cutover the page falls back to TestFlight
+// + iOS IAP — see /api/subscribe/checkout for the gating.
+app.get('/subscribe', (_req, res) => {
+  res.sendFile(join(__dirname, 'public', 'subscribe.html'));
+});
+
+// POST /api/subscribe/checkout
+//   body: { plan: 'pro_annual'|'recovery_session'|'recovery_monthly'|'recovery_annual',
+//           utm?: { utm_source, utm_medium, utm_campaign } }
+// Returns: { url } on success (Stripe-hosted checkout), or
+//          { error: 'stripe_not_configured' } when env vars aren't set
+//          yet — the client falls back to TestFlight in that case.
+app.post('/api/subscribe/checkout', async (req, res) => {
+  const plan = String(req.body?.plan || '');
+  const priceId = STRIPE_PRICES[plan];
+  const mode = STRIPE_MODES[plan];
+
+  if (!stripe || !priceId || !mode) {
+    // Pre-launch state — Stripe env vars not set yet. The client
+    // bounces to TestFlight in this branch; we return 200 so we
+    // don't pollute error monitoring during the rollout window.
+    return res.status(200).json({ error: 'stripe_not_configured' });
+  }
+
+  const utm = req.body?.utm || {};
+  const success = `${req.protocol}://${req.get('host')}/subscribe?status=success&plan=${encodeURIComponent(plan)}`;
+  const cancel  = `${req.protocol}://${req.get('host')}/subscribe?status=cancelled`;
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: success,
+      cancel_url: cancel,
+      allow_promotion_codes: true,
+      automatic_tax: { enabled: true },
+      // Metadata follows the cart through to the eventual webhook
+      // (we'll wire that next once price IDs are confirmed live).
+      // Stripe caps each metadata value at 500 chars; clampTag keeps
+      // us well under without truncating real UTM values.
+      metadata: {
+        plan,
+        utm_source:   clampTag(utm.utm_source)   ?? '',
+        utm_medium:   clampTag(utm.utm_medium)   ?? '',
+        utm_campaign: clampTag(utm.utm_campaign) ?? '',
+      },
+    });
+    return res.json({ url: session.url });
+  } catch (err) {
+    console.error('Stripe checkout error:', err.message);
+    return res.status(500).json({
+      error: 'checkout_failed',
+      message: 'Couldn\'t start checkout. Please try again or email support@aegisdial.com.',
+    });
+  }
 });
 
 // Admin endpoints, basic-auth gated on WEB_ADMIN_PASSWORD. Lets us

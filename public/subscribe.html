@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Subscribe — AegisDial</title>
+<meta name="description" content="Pick a plan and protect yourself or someone you love from phone scams, suspicious texts, and dark-web breaches.">
+<link rel="icon" href="/icon.png">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  body {
+    background:
+      radial-gradient(1100px 700px at 50% -10%, rgba(31, 224, 138, 0.10), transparent 60%),
+      radial-gradient(900px 600px at 90% 50%, rgba(31, 132, 224, 0.08), transparent 60%),
+      #000;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+    font-weight: 800;
+    font-size: 17px;
+    text-decoration: none;
+    letter-spacing: -0.3px;
+  }
+  .brand img { width: 28px; height: 28px; border-radius: 7px; }
+  .nav-links { display: flex; gap: 26px; }
+  .nav-links a {
+    color: #B8C2CC;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .nav-links a:hover { color: #fff; }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  .eyebrow {
+    color: #1FE08A;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-size: clamp(34px, 5vw, 50px);
+    line-height: 1.02;
+    letter-spacing: -1.2px;
+    margin: 0 0 14px;
+    font-weight: 800;
+  }
+  .sub {
+    color: #B8C2CC;
+    font-size: 17px;
+    line-height: 1.55;
+    max-width: 660px;
+    margin: 0 auto 36px;
+  }
+  .header { text-align: center; margin-bottom: 14px; }
+
+  .billing-toggle {
+    display: inline-flex;
+    background: #0A0E14;
+    border: 1px solid #1F2832;
+    border-radius: 12px;
+    padding: 4px;
+    margin: 6px auto 36px;
+  }
+  .billing-toggle button {
+    background: transparent;
+    color: #B8C2CC;
+    border: none;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 9px;
+    cursor: pointer;
+  }
+  .billing-toggle button.on {
+    background: #1FE08A;
+    color: #000;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+  }
+  .plan {
+    background: #0A0E14;
+    border: 1px solid #1F2832;
+    border-radius: 18px;
+    padding: 26px 22px 22px;
+    display: flex;
+    flex-direction: column;
+  }
+  .plan.featured {
+    border-color: #1FE08A;
+    box-shadow: 0 0 0 1px rgba(31, 224, 138, 0.4),
+                0 10px 40px rgba(31, 224, 138, 0.08);
+  }
+  .plan-tag {
+    display: inline-block;
+    align-self: flex-start;
+    background: rgba(31, 224, 138, 0.14);
+    color: #1FE08A;
+    border: 1px solid rgba(31, 224, 138, 0.4);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  .plan h2 {
+    font-size: 22px;
+    margin: 0 0 4px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+  }
+  .plan .pitch {
+    color: #B8C2CC;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0 0 18px;
+  }
+  .price {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .price .amount {
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -1.4px;
+  }
+  .price .per {
+    color: #6A7480;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .price-note {
+    color: #6A7480;
+    font-size: 12px;
+    margin-bottom: 18px;
+    min-height: 16px;
+  }
+  ul.feat {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 22px;
+    color: #B8C2CC;
+    font-size: 14px;
+    line-height: 1.6;
+    flex: 1;
+  }
+  ul.feat li {
+    padding-left: 22px;
+    position: relative;
+    margin-bottom: 8px;
+  }
+  ul.feat li:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 12px;
+    height: 6px;
+    border-left: 2px solid #1FE08A;
+    border-bottom: 2px solid #1FE08A;
+    transform: rotate(-45deg);
+  }
+  .cta {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background: #1FE08A;
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.1s ease;
+  }
+  .cta:hover { transform: translateY(-1px); }
+  .cta.outline {
+    background: transparent;
+    color: #fff;
+    border: 1px solid #1F2832;
+  }
+  .cta:disabled,
+  .cta.disabled {
+    background: #1F2832;
+    color: #6A7480;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .fineprint {
+    margin: 40px auto 0;
+    max-width: 720px;
+    text-align: center;
+    color: #6A7480;
+    font-size: 12px;
+    line-height: 1.65;
+  }
+  .fineprint a { color: #B8C2CC; }
+
+  .ios-banner {
+    background: rgba(31, 132, 224, 0.08);
+    border: 1px solid rgba(31, 132, 224, 0.3);
+    border-radius: 12px;
+    padding: 14px 18px;
+    color: #B8C2CC;
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 0 auto 28px;
+    max-width: 720px;
+    text-align: center;
+  }
+  .ios-banner a { color: #1FE08A; text-decoration: none; font-weight: 600; }
+
+  footer {
+    border-top: 1px solid #1F2832;
+    padding: 26px 24px;
+    text-align: center;
+    color: #6A7480;
+    font-size: 12px;
+  }
+  footer a { color: #B8C2CC; text-decoration: none; margin: 0 8px; }
+
+  @media (max-width: 640px) {
+    nav { padding: 16px 20px; }
+    main { padding: 24px 16px 60px; }
+    .nav-links { gap: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="/">
+    <img src="/icon.png" alt="">
+    AegisDial
+  </a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/developers">For developers</a>
+    <a href="/support">Support</a>
+  </div>
+</nav>
+
+<main>
+  <div class="header">
+    <p class="eyebrow">Plans</p>
+    <h1>One tap stops a scam.<br>One plan stops the next one.</h1>
+    <p class="sub">AegisDial protects you and your family from phone scams, suspicious texts, and dark-web breaches — privately, on your iPhone. Pick a plan that matches what you need today.</p>
+  </div>
+
+  <div class="ios-banner" id="ios-banner">
+    On iPhone? <a href="https://testflight.apple.com/join/Hf2tFENW">Install through TestFlight</a> and subscribe inside the app — Apple handles billing securely.
+  </div>
+
+  <div class="grid">
+
+    <!-- Pro Annual -->
+    <div class="plan">
+      <span class="plan-tag">Prevent</span>
+      <h2>Pro Annual</h2>
+      <p class="pitch">Full prevention stack: live call scoring, SMS filter, breach monitor, and family alerts.</p>
+      <div class="price">
+        <span class="amount">$399</span>
+        <span class="per">/ year</span>
+      </div>
+      <div class="price-note">Less than $34 per month, billed once.</div>
+      <ul class="feat">
+        <li>Live Shield AI on every call</li>
+        <li>SMS Shield with paste-to-scan</li>
+        <li>Email Shield + breach monitoring</li>
+        <li>Family alerts (up to 50 contacts)</li>
+        <li>Identity Shield dashboard</li>
+      </ul>
+      <button class="cta" data-plan="pro_annual">Subscribe — $399 / year</button>
+    </div>
+
+    <!-- Recovery Session — featured -->
+    <div class="plan featured">
+      <span class="plan-tag" style="background:rgba(255,149,0,0.14);color:#FF9500;border-color:rgba(255,149,0,0.4);">Recover</span>
+      <h2>Recovery Session</h2>
+      <p class="pitch">You just got hit. Get a specialist on the line, a wire-trace request to your bank, and a legal evidence packet — in 14 days.</p>
+      <div class="price">
+        <span class="amount">$149</span>
+        <span class="per">/ 14 days</span>
+      </div>
+      <div class="price-note">One-time. Includes 14-day Pro access.</div>
+      <ul class="feat">
+        <li>Specialist hand-off within 24 hours</li>
+        <li>Bank wire-trace request packet</li>
+        <li>Crypto trace + recovery filing</li>
+        <li>FTC + IC3 evidence bundle</li>
+        <li>14 days of full Pro features</li>
+      </ul>
+      <button class="cta" data-plan="recovery_session">Get help now — $149</button>
+    </div>
+
+    <!-- Recovery Concierge -->
+    <div class="plan">
+      <span class="plan-tag" style="background:rgba(31,132,224,0.14);color:#1F84E0;border-color:rgba(31,132,224,0.4);">Ongoing</span>
+      <h2>Recovery Concierge</h2>
+      <p class="pitch">Continuing support after the first session. Track recoveries, get re-targeted scam alerts, keep a specialist on call.</p>
+      <div class="price">
+        <span class="amount">$99</span>
+        <span class="per">/ month</span>
+      </div>
+      <div class="price-note">Or $899 / year (save $289).</div>
+      <ul class="feat">
+        <li>Ongoing recovery case tracking</li>
+        <li>Re-targeted scam protection</li>
+        <li>Quarterly identity audit</li>
+        <li>Priority specialist response</li>
+        <li>Everything in Pro Annual</li>
+      </ul>
+      <div style="display:flex;gap:8px;">
+        <button class="cta" data-plan="recovery_monthly" style="flex:1;">$99 / mo</button>
+        <button class="cta outline" data-plan="recovery_annual" style="flex:1;">$899 / yr</button>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="fineprint">
+    Cancel anytime in your account. Recovery Session is one-time and non-refundable once a specialist has been assigned. All prices in USD.<br>
+    By subscribing you agree to the <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
+  </p>
+</main>
+
+<footer>
+  © 2026 AegisDial
+  · <a href="/privacy">Privacy</a>
+  · <a href="/terms">Terms</a>
+  · <a href="/support">Support</a>
+  · <a href="/developers">Developers API</a>
+</footer>
+
+<script>
+  // Capture UTMs so the subscribe page also attributes paid traffic
+  // when a visitor hits /subscribe directly from an ad. Same shape as
+  // the landing page — keys mirror the columns we already store in the
+  // waitlist table, so analytics rolls up across both surfaces.
+  const params = new URLSearchParams(window.location.search);
+  const utm = {
+    utm_source:   params.get('utm_source'),
+    utm_medium:   params.get('utm_medium'),
+    utm_campaign: params.get('utm_campaign'),
+  };
+  try { sessionStorage.setItem('aegis_utm', JSON.stringify(utm)); } catch (_) {}
+
+  document.querySelectorAll('button[data-plan]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const plan = btn.getAttribute('data-plan');
+      btn.disabled = true;
+      const label = btn.textContent;
+      btn.textContent = 'Starting checkout…';
+      try {
+        const r = await fetch('/api/subscribe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan, utm }),
+        });
+        const j = await r.json();
+        if (j.url) {
+          // Stripe Checkout — open in same tab so the customer doesn't
+          // bounce back to the marketing page after paying.
+          window.location.href = j.url;
+          return;
+        }
+        if (j.error === 'stripe_not_configured') {
+          // Pre-launch fallback: send them to TestFlight + iOS IAP. The
+          // moment Jesiah pastes Stripe Price IDs the env-var check
+          // passes and this branch becomes unreachable — no code change
+          // needed on cutover day.
+          window.location.href = 'https://testflight.apple.com/join/Hf2tFENW';
+          return;
+        }
+        alert(j.message || "Couldn't start checkout. Please try again or email support@aegisdial.com.");
+      } catch (_) {
+        alert("Couldn't reach the server. Please try again.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = label;
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
